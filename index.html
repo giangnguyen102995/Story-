@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theo Dõi Số Đo Cơ Thể</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface2: #252840;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --accent3: #43e97b;
+      --text: #e8eaf6;
+      --muted: #8888aa;
+      --border: #2e3152;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1d2e 0%, #252840 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    header .logo {
+      font-size: 28px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #6c63ff, #ff6584);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 20px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+      transition: all .2s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ---- FORM ---- */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .form-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 22px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-date {
+      margin-bottom: 22px;
+    }
+
+    .form-date label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .form-date input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      outline: none;
+      width: 200px;
+      transition: border-color .2s;
+    }
+
+    .form-date input:focus { border-color: var(--accent); }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 520px) { .fields-grid { grid-template-columns: 1fr; } }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field label .icon { font-size: 14px; }
+
+    .field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: #555577; }
+
+    .field .unit {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: -2px;
+    }
+
+    .save-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .save-btn:hover { opacity: .9; transform: translateY(-1px); }
+    .save-btn:active { transform: translateY(0); }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--accent3);
+      color: #0f1117;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ---- CHART ---- */
+    .chart-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .metric-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .metric-btn:hover { color: var(--text); border-color: var(--accent); }
+    .metric-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .chart-wrap h3 {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    canvas { max-height: 320px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      text-align: center;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .stat-card .delta {
+      font-size: 0.78rem;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    .delta.up { color: #ff6584; }
+    .delta.down { color: #43e97b; }
+    .delta.neutral { color: var(--muted); }
+
+    /* ---- HISTORY TABLE ---- */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .del-all-btn {
+      background: none;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .del-all-btn:hover { background: var(--accent2); color: #fff; }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody td {
+      padding: 11px 14px;
+      color: var(--text);
+    }
+
+    .del-row-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all .2s;
+    }
+
+    .del-row-btn:hover { background: #ff658433; color: var(--accent2); }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .big { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">💪</div>
+  <div>
+    <h1>Theo Dõi Số Đo Cơ Thể</h1>
+    <p>Nhập & xem biểu đồ tiến trình của bạn</p>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('input')">✏️ Nhập Liệu</button>
+    <button class="tab-btn" onclick="switchTab('chart')">📊 Biểu Đồ</button>
+    <button class="tab-btn" onclick="switchTab('history')">📋 Lịch Sử</button>
+  </div>
+
+  <!-- TAB: NHẬP LIỆU -->
+  <div id="tab-input" class="tab-content active">
+    <div class="form-card">
+      <h2>📝 Nhập Số Đo Hôm Nay</h2>
+
+      <div class="form-date">
+        <label>Ngày đo</label>
+        <input type="date" id="input-date" />
+      </div>
+
+      <div class="fields-grid">
+        <div class="field">
+          <label><span class="icon">🫀</span> Cân nặng</label>
+          <input type="number" id="f-weight" placeholder="0" step="0.1" min="0" />
+          <span class="unit">kg</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">📏</span> Ngực</label>
+          <input type="number" id="f-chest" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">📏</span> Eo</label>
+          <input type="number" id="f-waist" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">📏</span> Bụng</label>
+          <input type="number" id="f-belly" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">💪</span> Bắp tay</label>
+          <input type="number" id="f-bicep" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">📏</span> Mông</label>
+          <input type="number" id="f-hip" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+        <div class="field">
+          <label><span class="icon">🦵</span> Đùi</label>
+          <input type="number" id="f-thigh" placeholder="0" step="0.1" min="0" />
+          <span class="unit">cm</span>
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="saveEntry()">💾 Lưu số đo</button>
+    </div>
+  </div>
+
+  <!-- TAB: BIỂU ĐỒ -->
+  <div id="tab-chart" class="tab-content">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="chart-controls">
+      <span style="font-size:.85rem;color:var(--muted);font-weight:600;margin-right:4px;">Xem:</span>
+      <button class="metric-btn active" data-key="all" onclick="selectMetric(this)">Tất cả</button>
+      <button class="metric-btn" data-key="weight" onclick="selectMetric(this)">Cân nặng</button>
+      <button class="metric-btn" data-key="chest" onclick="selectMetric(this)">Ngực</button>
+      <button class="metric-btn" data-key="waist" onclick="selectMetric(this)">Eo</button>
+      <button class="metric-btn" data-key="belly" onclick="selectMetric(this)">Bụng</button>
+      <button class="metric-btn" data-key="bicep" onclick="selectMetric(this)">Bắp tay</button>
+      <button class="metric-btn" data-key="hip" onclick="selectMetric(this)">Mông</button>
+      <button class="metric-btn" data-key="thigh" onclick="selectMetric(this)">Đùi</button>
+    </div>
+
+    <div class="chart-wrap">
+      <h3>Tiến trình theo ngày</h3>
+      <canvas id="mainChart"></canvas>
+    </div>
+
+    <div class="chart-wrap" id="radar-wrap">
+      <h3>Phân bố số đo mới nhất (cm)</h3>
+      <canvas id="radarChart"></canvas>
+    </div>
+  </div>
+
+  <!-- TAB: LỊCH SỬ -->
+  <div id="tab-history" class="tab-content">
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>📋 Lịch Sử Số Đo</h2>
+        <button class="del-all-btn" onclick="deleteAll()">Xóa tất cả</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Cân nặng (kg)</th>
+              <th>Ngực (cm)</th>
+              <th>Eo (cm)</th>
+              <th>Bụng (cm)</th>
+              <th>Bắp tay (cm)</th>
+              <th>Mông (cm)</th>
+              <th>Đùi (cm)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <div class="big">📭</div>
+        <p>Chưa có dữ liệu. Hãy nhập số đo đầu tiên của bạn!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'body_measurements_v1';
+const METRICS = [
+  { key: 'weight', label: 'Cân nặng', unit: 'kg', color: '#6c63ff' },
+  { key: 'chest',  label: 'Ngực',     unit: 'cm', color: '#ff6584' },
+  { key: 'waist',  label: 'Eo',       unit: 'cm', color: '#43e97b' },
+  { key: 'belly',  label: 'Bụng',     unit: 'cm', color: '#f7971e' },
+  { key: 'bicep',  label: 'Bắp tay',  unit: 'cm', color: '#0acffe' },
+  { key: 'hip',    label: 'Mông',     unit: 'cm', color: '#e040fb' },
+  { key: 'thigh',  label: 'Đùi',      unit: 'cm', color: '#ffb347' },
+];
+
+let mainChart = null;
+let radarChart = null;
+let selectedMetric = 'all';
+
+// ---- STORAGE ----
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ---- INIT ----
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('input-date').value = today;
+  renderHistory();
+  renderCharts();
+  renderStats();
+});
+
+// ---- TABS ----
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'chart') { renderCharts(); renderStats(); }
+  if (name === 'history') renderHistory();
+}
+
+// ---- SAVE ----
+function saveEntry() {
+  const date = document.getElementById('input-date').value;
+  if (!date) { showToast('Vui lòng chọn ngày!', '#ff6584'); return; }
+
+  const entry = { date };
+  let hasValue = false;
+  METRICS.forEach(m => {
+    const val = parseFloat(document.getElementById('f-' + m.key).value);
+    entry[m.key] = isNaN(val) ? null : val;
+    if (!isNaN(val)) hasValue = true;
+  });
+
+  if (!hasValue) { showToast('Vui lòng nhập ít nhất một số đo!', '#ff6584'); return; }
+
+  const data = loadData();
+  const idx = data.findIndex(e => e.date === date);
+  if (idx >= 0) {
+    // Merge: keep existing non-null, overwrite with new non-null
+    METRICS.forEach(m => { if (entry[m.key] !== null) data[idx][m.key] = entry[m.key]; });
+    showToast('✅ Đã cập nhật số đo ngày ' + formatDate(date));
+  } else {
+    data.push(entry);
+    data.sort((a, b) => a.date.localeCompare(b.date));
+    showToast('✅ Đã lưu số đo ngày ' + formatDate(date));
+  }
+  saveData(data);
+  clearForm();
+}
+
+function clearForm() {
+  METRICS.forEach(m => { document.getElementById('f-' + m.key).value = ''; });
+}
+
+// ---- HISTORY TABLE ----
+function renderHistory() {
+  const data = loadData().slice().reverse();
+  const tbody = document.getElementById('history-tbody');
+  const empty = document.getElementById('empty-state');
+  tbody.innerHTML = '';
+
+  if (!data.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  data.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${formatDate(e.date)}</strong></td>
+      ${METRICS.map(m => `<td>${e[m.key] != null ? e[m.key] : '—'}</td>`).join('')}
+      <td><button class="del-row-btn" onclick="deleteEntry('${e.date}')">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteEntry(date) {
+  if (!confirm('Xóa dữ liệu ngày ' + formatDate(date) + '?')) return;
+  const data = loadData().filter(e => e.date !== date);
+  saveData(data);
+  renderHistory();
+  renderCharts();
+  renderStats();
+  showToast('🗑️ Đã xóa');
+}
+
+function deleteAll() {
+  if (!confirm('Xóa toàn bộ dữ liệu?')) return;
+  saveData([]);
+  renderHistory();
+  renderCharts();
+  renderStats();
+  showToast('🗑️ Đã xóa tất cả');
+}
+
+// ---- STATS CARDS ----
+function renderStats() {
+  const data = loadData();
+  const row = document.getElementById('stats-row');
+  row.innerHTML = '';
+  if (data.length === 0) return;
+
+  const latest = data[data.length - 1];
+  const prev = data.length > 1 ? data[data.length - 2] : null;
+
+  METRICS.forEach(m => {
+    if (latest[m.key] == null) return;
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    let deltaHtml = '';
+    if (prev && prev[m.key] != null) {
+      const d = (latest[m.key] - prev[m.key]).toFixed(1);
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'neutral';
+      const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '—';
+      deltaHtml = `<div class="delta ${cls}">${arrow} ${Math.abs(d)} ${m.unit}</div>`;
+    }
+    card.innerHTML = `
+      <div class="label">${m.label}</div>
+      <div class="value" style="color:${m.color}">${latest[m.key]}</div>
+      <div style="font-size:.7rem;color:var(--muted)">${m.unit}</div>
+      ${deltaHtml}
+    `;
+    row.appendChild(card);
+  });
+}
+
+// ---- CHARTS ----
+function selectMetric(btn) {
+  document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedMetric = btn.dataset.key;
+  renderCharts();
+}
+
+function renderCharts() {
+  const data = loadData();
+  const labels = data.map(e => formatDateShort(e.date));
+
+  // Determine which metrics to show
+  const metricsToShow = selectedMetric === 'all'
+    ? METRICS
+    : METRICS.filter(m => m.key === selectedMetric);
+
+  // Main line chart
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+
+  const datasets = metricsToShow.map(m => ({
+    label: `${m.label} (${m.unit})`,
+    data: data.map(e => e[m.key]),
+    borderColor: m.color,
+    backgroundColor: m.color + '22',
+    borderWidth: 2.5,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    tension: 0.4,
+    fill: metricsToShow.length === 1,
+    spanGaps: true,
+  }));
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#8888aa', font: { size: 12 } }
+        },
+        tooltip: {
+          backgroundColor: '#1a1d2e',
+          borderColor: '#2e3152',
+          borderWidth: 1,
+          titleColor: '#e8eaf6',
+          bodyColor: '#8888aa',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8888aa', font: { size: 11 } },
+          grid: { color: '#2e3152' }
+        },
+        y: {
+          ticks: { color: '#8888aa', font: { size: 11 } },
+          grid: { color: '#2e3152' }
+        }
+      }
+    }
+  });
+
+  // Radar chart (latest entry, cm metrics only)
+  const radarCtx = document.getElementById('radarChart').getContext('2d');
+  if (radarChart) radarChart.destroy();
+  document.getElementById('radar-wrap').style.display = data.length ? 'block' : 'none';
+
+  if (data.length) {
+    const latest = data[data.length - 1];
+    const cmMetrics = METRICS.filter(m => m.unit === 'cm');
+    radarChart = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: cmMetrics.map(m => m.label),
+        datasets: [{
+          label: 'Số đo mới nhất (cm)',
+          data: cmMetrics.map(m => latest[m.key] || 0),
+          backgroundColor: 'rgba(108,99,255,0.25)',
+          borderColor: '#6c63ff',
+          borderWidth: 2,
+          pointBackgroundColor: cmMetrics.map(m => METRICS.find(x=>x.key===m.key).color),
+          pointRadius: 5,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#8888aa' } }
+        },
+        scales: {
+          r: {
+            ticks: { color: '#8888aa', backdropColor: 'transparent', font: { size: 10 } },
+            grid: { color: '#2e3152' },
+            pointLabels: { color: '#c0c0e0', font: { size: 12 } }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ---- UTILS ----
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function formatDateShort(dateStr) {
+  const [, m, d] = dateStr.split('-');
+  return `${d}/${m}`;
+}
+
+function showToast(msg, color = '#43e97b') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.style.color = color === '#43e97b' ? '#0f1117' : '#fff';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
